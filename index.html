@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!-- Added viewport-fit=cover for iPhone notches -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>🎂 Message to 박산영 🎂</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  html, body { 
+    height: 100%; 
+    height: 100dvh; /* Fixes mobile Safari address bar issue */
+    overflow: hidden;
+  }
+  
+  body {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    color: #f5f5f5;
+    font-family: 'Courier New', monospace;
+    /* Prevents double-tap zoom on iPhones */
+    touch-action: manipulation; 
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ---------- Shared screen ---------- */
+  .screen {
+    display: none;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    z-index: 2;
+  }
+  .screen.active { display: block; animation: fadeIn 0.8s ease; }
+  .screen.leaving { animation: fadeOut 0.8s ease forwards; }
+
+  /* ---------- Welcome / Lock / Intro / Transition Screens ---------- */
+  #lockScreen, #introScreen, #transitionScreen {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 20px;
+    padding-top: max(20px, env(safe-area-inset-top)); /* Safe area for notch */
+    padding-bottom: max(20px, env(safe-area-inset-bottom)); /* Safe area for home bar */
+    text-align: center;
+  }
+  #lockScreen.active, #introScreen.active, #transitionScreen.active {
+    display: flex;
+  }
+
+  /* ---------- Message Screen ---------- */
+  #messageScreen {
+    display: none;
+    width: 100%;
+    height: 100%;
+    padding: 10px;            
+    overflow: hidden;         
+    justify-content: center;  
+    align-items: center;
+  }
+  #messageScreen.active {
+    display: flex;
+  }
+
+  /* ---------- Welcome Screen (Envelope) ---------- */
+  #welcomeScreen {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer; 
+  }
+  #welcomeScreen.active {
+    display: flex;
+  }
+  
+  .envelope-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #envelope {
+    font-size: 15rem; /* Slightly smaller for small screens */
+    line-height: 1;
+    user-select: none;
+    animation: float 3s ease-in-out infinite;
+    filter: drop-shadow(0 0 30px rgba(255, 107, 157, 0.6));
+    transition: transform 0.3s ease, filter 0.3s ease;
+  }
+  
+  #welcomeScreen:hover #envelope {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 50px rgba(255, 107, 157, 0.9));
+  }
+
+  .tap-text {
+    margin-top: 0px;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    color: #ffb6c1;
+    text-transform: uppercase;
+    font-weight: bold;
+    font-family: serif;
+    animation: pulseTap 1.5s ease-in-out infinite;
+    opacity: 0.8;
+  }
+
+  @keyframes pulseTap {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50%      { opacity: 1; transform: scale(1.1); }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-15px); }
+  }
+  
+  @keyframes dissolveEnvelope {
+    0% {
+      opacity: 1;
+      transform: scale(1);
+      filter: brightness(1) blur(0);
+    }
+    40% {
+      opacity: 1;
+      transform: scale(1.2);
+      filter: brightness(2) blur(0);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(2.5);
+      filter: brightness(3) blur(20px);
+    }
+  }
+
+  #envelope.opening {
+    animation: dissolveEnvelope 1.2s cubic-bezier(.18,.89,.32,1.28) forwards;
+    pointer-events: none;
+  }
+  
+  .tap-text.opening {
+    animation: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  /* ---------- Lock screen ---------- */
+  #lockScreen h1 {
+    font-size: 1.1rem; margin-bottom: 20px;
+    color: #ffb6c1; letter-spacing: 1px;
+  }
+  #lockScreen p { font-size: 0.9rem; color: #aaa; margin-bottom: 22px; }
+  #passwordInput {
+    width: 100%; max-width: 280px;
+    padding: 14px 18px; border-radius: 30px;
+    border: 2px solid #ffb6c1;
+    background: rgba(255,255,255,0.05);
+    color: #fff; font-size: 1.4rem;
+    text-align: center; letter-spacing: 10px;
+    outline: none; transition: 0.3s;
+    font-family: 'Courier New', monospace;
+  }
+  #passwordInput:focus {
+    border-color: #ff6b9d;
+    box-shadow: 0 0 18px rgba(255,107,157,0.4);
+  }
+  #unlockBtn {
+    margin-top: 18px; padding: 12px 34px;
+    border: none; border-radius: 30px;
+    background: linear-gradient(135deg, #ff6b9d, #c44569);
+    color: #fff; font-size: 1rem; cursor: pointer;
+    letter-spacing: 1px; transition: 0.3s;
+  }
+  #unlockBtn:hover { transform: scale(1.05); }
+  #errorMsg { margin-top: 14px; color: #ff6b6b; font-size: 0.85rem; min-height: 20px; }
+
+  /* ---------- Intro & Transition Text ---------- */
+  #introScreen h2, #transitionScreen h2 {
+    font-size: 1.2rem; line-height: 1.7;
+    color: #ffb6c1; letter-spacing: 1px; margin-bottom: 12px;
+    min-height: 60px;
+  }
+  #introScreen .sub, #transitionScreen .sub {
+    font-size: 1.0rem; color: #aaa;
+    margin-bottom: 36px; font-style: italic; letter-spacing: 0.5px;
+  }
+  
+  #okBtn, #transitionBtn {
+    padding: 14px 48px; border: none; border-radius: 30px;
+    background: linear-gradient(135deg, #ff6b9d, #c44569);
+    color: #fff; font-size: 1.05rem; letter-spacing: 2px;
+    cursor: pointer; transition: 0.3s;
+  }
+  #okBtn:hover, #transitionBtn:hover { transform: scale(1.06); }
+
+  #introTitle::after, #transitionTitle::after {
+    content: '|'; animation: blink 0.9s infinite; color: #ffb6c1;
+  }
+  #introTitle.done::after, #transitionTitle.done::after { content: ''; }
+
+  /* ---------- Message text ---------- */
+  #typedText {
+    font-size: 1.1rem; /* Slightly smaller for mobile so it fits without scrolling */        
+    line-height: 1.5;         
+    white-space: pre-wrap; 
+    letter-spacing: 0.5px;
+    text-align: left;       
+    width: 100%;
+    max-width: 500px;       
+    margin: 0 auto;         
+    padding: 0 10px;          
+  }
+  #typedText::after {
+    content: '|'; animation: blink 0.9s infinite; color: #ffb6c1;
+  }
+  #typedText.done::after { content: ''; }
+
+  /* ---------- Photo Screen ---------- */
+  #photoScreen { 
+    padding: 0;
+    overflow: hidden;
+  }
+
+  #photoStage {
+    position: absolute;
+    inset: 0;
+    background-color: #cda87c;
+    background-image: 
+      radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 0%, transparent 60%),
+      url('https://www.transparenttextures.com/patterns/cork-board.png');
+    transition: filter 1.5s ease;
+    z-index: 1;
+  }
+
+  #photoStage.dimmed {
+    filter: brightness(0.3) blur(3px);
+  }
+
+  #photoStage::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ---------- Final Message Overlay ---------- */
+  #finalOverlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column; 
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 50;
+    gap: 15px; 
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1.5s ease;
+  }
+  #finalOverlay.show { opacity: 1; }
+  
+  .finalBox {
+    font-size: 1.1rem; /* Adjusted for mobile */
+    line-height: 1.6;
+    letter-spacing: 0.5px;
+    max-width: 500px;
+    width: 100%;
+    color: #fff;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.7);
+    background: rgba(20, 20, 35, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 20px 24px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 182, 193, 0.3);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6), inset 0 0 40px rgba(255,182,193,0.1);
+  }
+
+  #finalTextA {
+    text-align: left;
+    white-space: pre-wrap;
+    min-height: 100px; 
+  }
+  #finalTextA::after {
+    content: '|'; animation: blink 0.9s infinite; color: #ffb6c1;
+  }
+  #finalTextA.done::after { content: ''; }
+
+  #finalTextB {
+    text-align: center;
+    white-space: pre-wrap;
+    opacity: 0;
+    transition: opacity 1.5s ease;
+    min-height: 80px;
+  }
+  #finalTextB.show { opacity: 1; }
+  #finalTextB::after {
+    content: '|'; animation: blink 0.9s infinite; color: #ffb6c1;
+  }
+  #finalTextB.done::after { content: ''; }
+
+  /* ---------- Photo Cards (Polaroid Style) ---------- */
+  .photoCard {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.85);
+    background: #fff;
+    border-radius: 4px;
+    padding: 12px 12px 55px 12px; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    transition: all 1.5s cubic-bezier(.18,.89,.32,1.28);
+    pointer-events: none;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .photoCard img {
+    width: 100%;
+    aspect-ratio: 4 / 3; 
+    display: block;
+    object-fit: cover;
+    background: #111;
+    border: 1px solid #ddd;
+    flex-shrink: 0;
+  }
+
+  .photoCard .caption {
+    position: absolute;
+    bottom: 15px;
+    left: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0 10px;
+    font-family: serif;
+    font-size: 0.85rem;
+    color: #333;
+    text-align: center;
+    flex-shrink: 0;
+    transition: font-size 1.5s ease;
+  }
+
+  .photoCard.hero {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+    z-index: 20;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+  }
+
+  .photoCard.pinned-corner {
+    opacity: 1;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.6), 2px 2px 10px rgba(0,0,0,0.3);
+    z-index: 5;
+  }
+
+  .pushpin {
+    display: none;
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #fff, #e0e0e0 40%, #999 100%);
+    box-shadow: 2px 4px 6px rgba(0,0,0,0.5);
+    z-index: 10;
+  }
+  .photoCard.pinned-corner .pushpin,
+  .photoCard.pinned-center .pushpin {
+    display: block;
+  }
+
+  .photoCard.pinned-center {
+    opacity: 1;
+    z-index: 30;
+    box-shadow: 0 15px 45px rgba(0,0,0,0.7), 0 0 0 4px rgba(255,255,255,0.2);
+  }
+  .photoCard.pinned-center .caption {
+    font-size: 0.8rem;
+    bottom: 18px;
+  }
+
+  .photoCard.dimmed {
+    filter: brightness(0.35) blur(1px); 
+    opacity: 0.6;
+  }
+  
+  .photoCard.dimmed .caption {
+    font-size: 0.6rem !important;
+    bottom: 10px !important;
+  }
+
+  /* ---------- Mute button ---------- */
+  #muteBtn {
+    position: fixed; 
+    top: max(16px, env(safe-area-inset-top)); 
+    right: max(16px, env(safe-area-inset-right));
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 2px solid rgba(255,182,193,0.7);
+    background: rgba(0,0,0,0.35); color: #ffb6c1;
+    font-size: 1.1rem; cursor: pointer; z-index: 100;
+    display: none; backdrop-filter: blur(6px);
+    transition: transform .2s, background .2s;
+  }
+  #muteBtn:hover { transform: scale(1.1); background: rgba(0,0,0,0.55); }
+  #muteBtn.visible { display: block; }
+
+  @keyframes blink { 50% { opacity: 0; } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+</style>
+</head>
+<body>
+
+<audio id="bgMusic" loop preload="none">
+  <source src="Beautiful.mp3" type="audio/mpeg">
+</audio>
+
+<button id="muteBtn" title="Mute / unmute">🔊</button>
+
+<!-- 0. WELCOME SCREEN (Envelope) -->
+<div id="welcomeScreen" class="screen active">
+  <div class="envelope-container">
+    <div id="envelope">💌</div>
+    <div class="tap-text" id="tapText">Tap The Heart</div>
+  </div>
+</div>
+
+<!-- 1. LOCK -->
+<div id="lockScreen" class="screen">
+  <h1>🔒 A Private Message to 박산영</h1>
+  <p>Enter the PIN to unlock 💕</p>
+  <input id="passwordInput" type="password" inputmode="numeric" pattern="[0-9]*"
+         autocomplete="one-time-code" maxlength="8" placeholder="••••">
+  <button id="unlockBtn">Unlock</button>
+  <div id="errorMsg"></div>
+</div>
+
+<!-- 2. INTRO -->
+<div id="introScreen" class="screen">
+  <h2 id="introTitle"></h2>
+  <p class="sub">Turn the volume up a bit~</p>
+  <button id="okBtn">OK</button>
+</div>
+
+<!-- 3. MESSAGE -->
+<div id="messageScreen" class="screen">
+  <div id="typedText"></div>
+</div>
+
+<!-- 4. TRANSITION -->
+<div id="transitionScreen" class="screen">
+  <h2 id="transitionTitle"></h2>
+  <p class="sub">Shall we? 😚</p>
+  <button id="transitionBtn">콜!</button>
+</div>
+
+<!-- 5. PHOTOS & FINAL MESSAGE -->
+<div id="photoScreen" class="screen">
+  <div id="photoStage"></div>
+  
+  <div id="finalOverlay">
+    <div id="finalTextA" class="finalBox"></div>
+    <div id="finalTextB" class="finalBox"></div>
+  </div>
+</div>
+
+<script>
+/* ==========================================================
+   CONFIGURATION
+   ========================================================== */
+
+const PASSWORD = "20261001";
+
+const MESSAGE_PART_1 =
+`안녕👋🏼박산영씨,
+
+Congrats that you have finished the puzzle I gave you🥳 and...
+YES!!! It is Hong Kong!!!
+
+This is the first birthday you have celebrated in Hong Kong, and it is really meaningful to me.
+
+You have always told me you feel insecure and lost of yourself because you don't find yourself belong to anywhere.
+
+But I would like to let you know that Hong Kong has already been, and will forever be your Home. 
+As long as I am here, since 01/10/2026, you will never be alone.
+
+Wherever you are, I will try to reach you out; 
+whenever you need, I will show up; 
+and always welcome you back Home with my hugs🩷`;
+
+const MESSAGE_TRANSITION =
+`There are many beautiful corners of Hong Kong left for us, and we will discover together...`;
+
+const PHOTOS = [
+  { url: "https://www.weroad.it/cdn-cgi/image/q=75,scq=60,f=auto/https://strapi-imaginary.weroad.it/resource/medium/345250/junk-boat-red-sails-harbor-skyline.jpg", caption: "Tsim Sha Tsui — Iconic of HK 🌆" },
+  { url: "https://d1bv4heaa2n05k.cloudfront.net/posts/BlogPost30653/1450095992062-shutterstock_85779664.jpg", caption: "Central — Peaking our Happiness ✨" },
+  { url: "https://expatliving.net/hong-kong/wp-content/uploads/sites/4/2019/04/Tai-O-Fishing-Village.jpg", caption: "Tai O — Let's eat seafood together on the boat 😋" },
+  { url: "https://images.trvl-media.com/place/553248621532744464/852c510a-5729-45af-bdcb-8f0b123fc743.jpg", caption: "Yuen Long — What if going for a chill cycling here 🚲" },
+  { url: "https://www.canon.com.hk/public/article/Skill_Sharing_Photography/10363/images/04.jpg", caption: "One day, YOU & ME, under the sunset 🥰" }
+];
+
+/* Adjusted for mobile screens so they fit nicely around the center photo */
+const CORNER_SLOTS = [
+  { top: "10%", left: "4%",  width: "42%", rotate: "-6deg" },
+  { top: "8%",  left: "54%", width: "42%", rotate: "7deg" },
+  { top: "55%", left: "4%",  width: "42%", rotate: "5deg" },
+  { top: "57%", left: "54%", width: "42%", rotate: "-4deg" }
+];
+
+const CENTER_SLOT = { top: "50%", left: "50%", width: "55%", rotate: "-1deg" };
+
+const MESSAGE_PART_2A =
+`산영아,
+I wish you can find yourself in HK😮
+I wish you can be yourself freely in HK🤩
+I wish you can feel secure and belonged in HK😊
+I wish you can live happily especially in HK😁`;
+
+const MESSAGE_PART_2B =
+`생일 축하해요 산영씨🎉
+&
+사랑해요😘`;
+
+// ⏱️ Timing (ms)
+const TYPING_SPEED       = 55;
+const HOLD_AFTER_TYPING  = 5000;
+const PHOTO_HERO_TIME    = 4000;
+const GAP_BEFORE_NEXT    = 1000;
+const HOLD_FINAL_COLLAGE = 2500;   
+const FADE_OUT_DURATION  = 800;
+
+/* ==========================================================
+   LOGIC
+   ========================================================== */
+
+const welcomeScreen   = document.getElementById('welcomeScreen');
+const envelope        = document.getElementById('envelope');
+const tapText         = document.getElementById('tapText');
+const lockScreen      = document.getElementById('lockScreen');
+const introScreen     = document.getElementById('introScreen');
+const introTitle      = document.getElementById('introTitle');
+const messageScreen   = document.getElementById('messageScreen');
+const transitionScreen= document.getElementById('transitionScreen');
+const transitionTitle = document.getElementById('transitionTitle');
+const transitionBtn   = document.getElementById('transitionBtn');
+const photoScreen     = document.getElementById('photoScreen');
+const photoStage      = document.getElementById('photoStage');
+const finalOverlay    = document.getElementById('finalOverlay');
+const finalTextA      = document.getElementById('finalTextA');
+const finalTextB      = document.getElementById('finalTextB');
+const passwordInput   = document.getElementById('passwordInput');
+const unlockBtn       = document.getElementById('unlockBtn');
+const errorMsg        = document.getElementById('errorMsg');
+const okBtn           = document.getElementById('okBtn');
+const typedText       = document.getElementById('typedText');
+const bgMusic         = document.getElementById('bgMusic');
+const muteBtn         = document.getElementById('muteBtn');
+
+bgMusic.volume = 0.4;
+
+/* ---------- helpers ---------- */
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+function typeText(text, element, speed) {
+  return new Promise(resolve => {
+    let i = 0;
+    element.textContent = '';
+    element.classList.remove('done');
+    const timer = setInterval(() => {
+      if (i < text.length) {
+        element.textContent += text.charAt(i++);
+      } else {
+        clearInterval(timer);
+        resolve();
+      }
+    }, speed);
+  });
+}
+
+function setActive(screen) {
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active', 'leaving');
+  });
+  screen.classList.add('active');
+}
+
+function fadeOutScreen(screen) {
+  return new Promise(resolve => {
+    screen.classList.remove('active');
+    screen.classList.add('leaving');
+    setTimeout(() => {
+      screen.classList.remove('leaving');
+      resolve();
+    }, FADE_OUT_DURATION);
+  });
+}
+
+/* ---------- Welcome Screen Logic ---------- */
+welcomeScreen.addEventListener('click', () => {
+  envelope.classList.add('opening');
+  tapText.classList.add('opening');
+  
+  setTimeout(() => {
+    setActive(lockScreen);
+    passwordInput.focus(); 
+  }, 800); 
+});
+
+/* ---------- build cards ---------- */
+function buildPhotoCards() {
+  photoStage.innerHTML = ''; 
+  
+  PHOTOS.forEach((p) => {
+    const card = document.createElement('div');
+    card.className = 'photoCard';
+    
+    const pin = document.createElement('div');
+    pin.className = 'pushpin';
+    card.appendChild(pin);
+
+    const img = document.createElement('img');
+    img.src = p.url;
+    img.alt = 'Hong Kong';
+    
+    const cap = document.createElement('div');
+    cap.className = 'caption';
+    cap.textContent = p.caption || '';
+    
+    card.appendChild(img);
+    card.appendChild(cap);
+    photoStage.appendChild(card);
+  });
+}
+
+/* ---------- Hero state ---------- */
+function applyHeroSize(card) {
+  const vw = window.innerWidth;
+  const width = Math.min(vw * 0.9, 450); /* Slightly larger hero image for mobile */
+  card.style.width = width + "px";
+  card.style.top = "50%";
+  card.style.left = "50%";
+  card.style.transform = "translate(-50%, -50%) scale(1) rotate(0deg)";
+}
+
+/* ---------- pin functions ---------- */
+function pinToCorner(card, slot) {
+  card.style.top    = slot.top;
+  card.style.left   = slot.left;
+  card.style.width  = slot.width;
+  card.style.transform = `translate(0, 0) scale(1) rotate(${slot.rotate})`;
+  card.classList.add('pinned-corner');
+}
+
+function pinToCenter(card) {
+  card.style.top    = CENTER_SLOT.top;
+  card.style.left   = CENTER_SLOT.left;
+  card.style.width  = CENTER_SLOT.width;
+  card.style.transform = `translate(-50%, -50%) scale(1) rotate(${CENTER_SLOT.rotate})`;
+  card.classList.add('pinned-center');
+}
+
+/* ---------- photo sequence ---------- */
+async function playPhotoSequence() {
+  setActive(photoScreen);
+  const cards = photoStage.querySelectorAll('.photoCard');
+
+  for (let i = 0; i < cards.length; i++) {
+    const card = cards[i];
+
+    applyHeroSize(card);
+    card.classList.add('hero');
+    await wait(PHOTO_HERO_TIME);
+
+    card.classList.remove('hero');
+    if (i < 4) {
+      pinToCorner(card, CORNER_SLOTS[i]);
+    } else {
+      pinToCenter(card);
+    }
+
+    await wait(GAP_BEFORE_NEXT);
+  }
+
+  await wait(HOLD_FINAL_COLLAGE);
+  
+  photoStage.classList.add('dimmed');
+  
+  for (let i = 0; i < 4; i++) {
+    cards[i].classList.add('dimmed');
+    cards[i].style.transform = `translate(0, 0) scale(0.75) rotate(${CORNER_SLOTS[i].rotate})`;
+  }
+  
+  finalOverlay.classList.add('show');
+  
+  await wait(1200); 
+  
+  await typeText(MESSAGE_PART_2A, finalTextA, TYPING_SPEED);
+  finalTextA.classList.add('done');
+  
+  await wait(1500);
+  
+  finalTextB.classList.add('show');
+  await wait(800);
+  
+  await typeText(MESSAGE_PART_2B, finalTextB, TYPING_SPEED);
+  finalTextB.classList.add('done');
+}
+
+/* ---------- full story ---------- */
+async function playStory() {
+  setActive(messageScreen);
+  await typeText(MESSAGE_PART_1, typedText, TYPING_SPEED);
+  typedText.classList.add('done');
+
+  await wait(HOLD_AFTER_TYPING);
+  await fadeOutScreen(messageScreen);
+
+  setActive(transitionScreen);
+  await typeText(MESSAGE_TRANSITION, transitionTitle, TYPING_SPEED);
+  transitionTitle.classList.add('done');
+}
+
+/* ---------- unlock flow ---------- */
+function tryUnlock() {
+  if (passwordInput.value.trim() === PASSWORD) {
+    errorMsg.textContent = '';
+    
+    setActive(introScreen);
+    
+    typeText("Please put on your earphone\nto revel in 🎧", introTitle, TYPING_SPEED)
+      .then(() => {
+        introTitle.classList.add('done');
+      });
+
+  } else {
+    errorMsg.textContent = "Wrong PIN, try again 💔";
+    passwordInput.value = '';
+    passwordInput.focus();
+  }
+}
+
+function startExperience() {
+  bgMusic.play().catch(err => console.warn("Audio could not start:", err));
+  muteBtn.classList.add('visible');
+  playStory();
+}
+
+muteBtn.addEventListener('click', () => {
+  bgMusic.muted = !bgMusic.muted;
+  muteBtn.textContent = bgMusic.muted ? '🔇' : '🔊';
+});
+
+unlockBtn.addEventListener('click', tryUnlock);
+passwordInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') tryUnlock();
+});
+okBtn.addEventListener('click', startExperience);
+
+transitionBtn.addEventListener('click', async () => {
+  await fadeOutScreen(transitionScreen);
+  playPhotoSequence();
+});
+
+/* ---------- init ---------- */
+buildPhotoCards();
+</script>
+</body>
+</html>
